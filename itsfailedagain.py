@@ -9,17 +9,28 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate, MigrateCommand
+from flask.ext.mail import Mail, Message
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-
 app = Flask(__name__)
+
 app.config['SECRET_KEY'] = 'this is just a tutorial so dont kill me on git'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+app.config['SQLALCHEMY_COMMIT_ON_TAREDOWN'] = True
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIN_PORT'] = '587'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['FLASKY_MAIL_SUBJECT_PREFIX'] = '[Flasky]'
+app.config['FLASKY_MAIL_SENDER'] = 'Flasky Admin <martinpb1l1l1l@gmail.com>'
+app.config['FLASKY_ADMIN'] = os.environ.get('FLASKY_ADMIN')
+
 manager = Manager(app)
 bootstrap = Bootstrap(app)
 moment = Moment(app)
+mail = Mail(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
-app.config['SQLALCHEMY_COMMIT_ON_TAREDOWN'] = True
 db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
@@ -33,6 +44,8 @@ def index():
             user = User(username=form.name.data)
             db.session.add(user)
             session['known'] = False
+            if app.config['FLASKY_ADMIN']:
+                send_email(app.config['FLASKY_ADMIN'], 'New User', 'mail/new_user', user=user)
         else:
             session['known'] = True
         session['name'] = form.name.data
@@ -59,6 +72,13 @@ def internal_server_error(e):
 def make_shell_context():
     return dict(app=app, db=db, User=User, Role=Role)
 
+
+def send_email(to, subject, template, **kwargs):
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + subject,
+                  sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + 'html', **kwargs)
+    mail.send(msg)
 
 class NameForm(Form):
     name = StringField('What is your name?', validators=[DataRequired()])
