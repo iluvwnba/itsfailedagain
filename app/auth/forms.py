@@ -10,3 +10,8 @@ class LoginForm(Form):
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log in')
 
+    # TODO Reg form
+
+    # TODO validate email - make sure emaild oesnt exist
+
+    #TODO validate username
