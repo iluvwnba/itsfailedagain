@@ -1,12 +1,12 @@
 __author__ = 'Martin'
 from flask import render_template, redirect, request, url_for, flash
-from flask.ext.login import login_user, login_required, logout_user
+from flask.ext.login import login_user, login_required, logout_user, current_user
 
 from .. import db
 from ..models import User
 from . import auth
 from .forms import LoginForm, RegistrationForm
-
+from ..email import send_email
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -35,9 +35,22 @@ def register():
         user = User(username=form.username.data, email=form.email.data, password=form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('You have registered successfully')
+        token = user.generate_confirmation_token()
+        send_email(user.email, 'Confirm your account', 'auth/email/confirm', user=user, token=token)
+        flash('You have registered successfully, check your email for verification')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', form=form)
+
+@auth.route('/confirm/<token>')
+@login_required
+def confirm(token):
+    if current_user.confirmed:
+        return redirect(url_for('main.index'))
+    if current_user.confirm(token):
+        flash('You have confirmed your account!')
+    else:
+        flash('Your confirmation link is invalid or expired')
+    return redirect(url_for('main.index'))
 
 
 
