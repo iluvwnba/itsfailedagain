@@ -5,7 +5,7 @@ from flask.ext.login import login_user, login_required, logout_user, current_use
 from .. import db
 from ..models import User
 from . import auth
-from .forms import LoginForm, RegistrationForm
+from .forms import LoginForm, RegistrationForm, PasswordResetForm
 from ..email import send_email
 
 @auth.route('/login', methods=['GET', 'POST'])
@@ -70,4 +70,19 @@ def unconfirmed():
     if current_user.is_anonymous() or current_user.confirmed:
         return redirect(url_for('main.index'))
     return render_template('auth/unconfirmed.html')
+
+@auth.route('/reset_password', methods=['GET', 'POST'])
+@login_required
+def reset_password():
+    form = PasswordResetForm()
+    user = User.query.filter_by(email=current_user.email).first()
+    if form.validate_on_submit():
+        if user.verify_password(form.current_pass.data):
+            user.password = form.password.data
+            db.session.add(user)
+            db.session.commit()
+            flash('Password has been changed!')
+            return redirect(url_for('main.index'))
+        flash('Your current password was not correct')
+    return render_template('auth/reset_password.html', form=form)
 
