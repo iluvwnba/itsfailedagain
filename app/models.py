@@ -1,7 +1,7 @@
 __author__ = 'Martin'
 from flask.ext.login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from itsdangerous import JSONWebSignatureSerializer as Serializer
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 
 
@@ -41,11 +41,12 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def generate_confirmation_token(self, expiration=3600):
-        s = Serializer(current_app['SECRET_KEY'], expiration)
-        return s.dumps({'confirm': self.id})
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({ 'confirm': self.id })
+
 
     def confirm(self, token):
-        s = Serializer(current_app['SECRET_KEY'])
+        s = Serializer(current_app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
         except:
@@ -54,6 +55,7 @@ class User(UserMixin, db.Model):
             return False
         self.confirmed = True
         db.session.add(self)
+        db.session.commit()
         return True
 
     def __repr__(self):
