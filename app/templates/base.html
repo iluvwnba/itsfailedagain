@@ -30,6 +30,7 @@
                     <ul class="dropdown-menu">
                         {%  if current_user.is_authenticated() %}
                             <li><a href="{{ url_for('auth.reset_password') }}">Reset password</a></li>
+                            <li><a href="{{ url_for('auth.send_reset_email') }}">Reset email</a></li>
                             <li><a href="{{ url_for('auth.logout') }}">Sign out</a></li>
                         {% else %}
                             <li><a href="{{ url_for('auth.login') }}">Sign in</a></li>

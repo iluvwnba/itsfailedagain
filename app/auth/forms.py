@@ -40,3 +40,9 @@ class PasswordResetForm(Form):
     password2 = PasswordField('Confirm New Password', validators=[DataRequired()])
     submit = SubmitField('Register')
 
+class EmailResetForm(Form):
+    old_email = StringField('Old Email', validators=[DataRequired(), Length(1,64), Email()])
+    email = StringField('New Email', validators=[DataRequired(), Length(1, 64), Email(), EqualTo('email2',
+                                                                                             'Emails must match')])
+    email2 = StringField('Confirm New Email', validators=[DataRequired(), Length(1,64), Email()])
+    submit = SubmitField('Reset Password')
