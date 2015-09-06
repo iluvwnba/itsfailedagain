@@ -2,8 +2,9 @@ __author__ = 'Martin'
 from flask.ext.login import UserMixin, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app
+from flask import current_app, request
 from datetime import datetime
+import hashlib
 
 from . import db, login_manager
 
@@ -63,7 +64,7 @@ class User(UserMixin, db.Model):
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
-
+    avatar_hash = db.Column(db.String(32))
 
     @property
     def password(self):
@@ -108,6 +109,7 @@ class User(UserMixin, db.Model):
             return False
         else:
             self.email = data.get('email')
+            self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexigest()
             db.session.add(self)
             db.session.commit()
             return True
@@ -123,6 +125,15 @@ class User(UserMixin, db.Model):
     def is_administrator(self):
         return self.can(Permission.ADMINISTRATOR)
 
+    def gravatar(self, size=100, default='identicon', rating='g'):
+        if request.is_secure:
+            url = 'https://secure.gravatar.com/avatar'
+        else:
+            url = 'http://secure.gravatar.com/avatar'
+        hash = self.avatar_hash or hashlib.md5(self.email.encode('utf-8',)).hexdigest()
+        return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(
+            url=url, hash=hash, size=size, default=default, rating=rating)
+
     def __repr__(self):
         return '<User %r>' % self.username
 
@@ -133,6 +144,8 @@ class User(UserMixin, db.Model):
                 self.role = Role.query.filter_by(permissions=0xff).first()
             if self.role is None:
                 self.role = Role.query.filter_by(default=True).first()
+        if self.email is not None and self.avatar_hash is None:
+            self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexigest()
 
 class AnonymousUser(AnonymousUserMixin):
 
@@ -143,6 +156,9 @@ class AnonymousUser(AnonymousUserMixin):
         return False
 
 login_manager.anonymous_user = AnonymousUser
+
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
