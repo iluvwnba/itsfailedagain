@@ -16,7 +16,6 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.session_protection = 'strong'
 login_manager.login_view = 'auth.login'
-login_manager.anonymous_user = An
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -35,3 +34,4 @@ def create_app(config_name):
     login_manager.init_app(app)
 
     return app
+
